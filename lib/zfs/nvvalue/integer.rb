@@ -15,10 +15,11 @@ module NVValue
     def self.c_type
       self.name.split("::").last.downcase.to_sym
     end
+    def self.to_value(ptr)
+      new(ptr.method("read_#{c_type}").call)
+    end
     def self.from_native(nvp)
-      value = NVValue.lookup("nvpair_value_#{c_type}".to_sym, nvp)
-      value = value.method("read_#{c_type}").call
-      new(nvp, value)
+      to_value(NVValue.lookup("nvpair_value_#{c_type}".to_sym, nvp))
     end
     def to_native
       ptr = FFI::MemoryPointer.new(self.class.c_type)

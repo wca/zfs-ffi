@@ -4,8 +4,11 @@ require "zfs/nvpair"
 # It is necessary to preserve additional attributes about pairings that
 # would not be feasible with Hash.
 #
-# Most of the logic for parsing nvlists is actually in NVPair.  The only
-# thing we try to do here is iterate on the nvlist.
+# Most of the logic for parsing nvlists is actually in NVPair & NVValue.
+# The only thing we try to do here is iterate on the nvlist.
+#
+# Note that there is also a NVValue::NVList, which is how we support nvlists
+# that are themselves values of a nvpair.
 class NVList
   include Enumerable
 
@@ -14,7 +17,6 @@ class NVList
     nvp = nil
     loop do
       nvp = LibNVPair.nvlist_next_nvpair(nvl, nvp)
-      puts "NVList.from_native(#{nvl.inspect}) nvp=#{nvp.inspect}"
       break if nvp.null?
       nvpair = NVPair.from_native(nvp)
       obj[nvpair.name] = nvpair

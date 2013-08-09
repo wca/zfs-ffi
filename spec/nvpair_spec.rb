@@ -9,11 +9,15 @@ require File.join(File.dirname(__FILE__), 'spec_helper')
 
 describe NVPair do
   def common_understanding(nvp_type, value)
+    nvvalue_m = "nvpair_value_#{nvp_type}".to_sym
     ptr = NVValue.factory(nvp_type, value).to_native
-    LibNVPair.should_receive(:nvpair_name).and_return("foo")
-    LibNVPair.should_receive(:nvpair_type).and_return(nvp_type)
-    LibNVPair.should_receive("nvpair_value_#{nvp_type}".to_sym) do |nvp, valp|
-      valp.write_pointer ptr
+    LibNVPair.should_receive(:nvpair_name).with(nil).and_return("foo")
+    LibNVPair.should_receive(:nvpair_type).with(nil).and_return(nvp_type)
+    LibNVPair.should_receive(nvvalue_m).with(nil, anything()) do |nvp, valp|
+      # XXX Make to_native() more useful here too.
+      fcn = (nvp_type == :boolean_value) ? "uint" : nvp_type
+      valp.send("write_#{fcn}".to_sym, ptr.send("read_#{fcn}".to_sym))
+      0 # All of these functions return 0 on success, errno otherwise
     end
     NVPair.from_native(nil)
   end

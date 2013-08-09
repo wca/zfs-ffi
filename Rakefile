@@ -1,4 +1,5 @@
 require 'rubygems/package_task'
+require 'rake/testtask'
 require 'rspec/core/rake_task'
 
 RSpec::Core::RakeTask.new
@@ -18,11 +19,21 @@ gem_spec = Gem::Specification.new do |spec|
   spec.files = candidates.delete_if {|c| c.match(/\.swp|\.svn|html|pkg/)}
 end
 
-desc "Perform a basic Ruby compile test"
-task :compile_test do
-  sh "ruby -I#{File.dirname(__FILE__)}/lib -rzfs -e 'puts ZFS.class' >/dev/null"
+topdir = File.dirname(__FILE__)
+libdir = "#{topdir}/lib"
+
+namespace :test do
+  desc "Perform a basic Ruby compile test"
+  task :compile do
+    sh "ruby -I#{libdir} -rzfs -e 'puts ZFS.class' >/dev/null"
+  end
 end
-task :test => :compile_test
+
+Rake::TestTask.new do |t|
+  t.name = "test:functional"
+  t.libs << "test"
+  t.test_files = FileList['test/functional/**/*_test.rb']
+end
 
 # Don't ship any gems without performing some sanity tests.
 task :gem => :test

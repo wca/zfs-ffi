@@ -20,22 +20,29 @@ module NVValue
       raise ArgumentError, "nvp_type #{nvp_type} not supported"
   end
   def self.factory(nvp_type, value, nvp=nil)
-    get_klass(nvp_type).new(nil, value)
+    get_klass(nvp_type).new(value)
   end
   def self.from_native(nvp, nvp_type)
-    puts "NVValue.from_native(#{nvp.inspect}, #{nvp_type})"
     get_klass(nvp_type).from_native(nvp)
   end
   def self.lookup(fcn, nvp)
     ptr = FFI::MemoryPointer.new(:pointer).write_pointer(nil)
-    raise "Lookup failed" unless LibNVPair.send(fcn, nvp, ptr).zero?
+    ret = LibNVPair.send(fcn, nvp, ptr)
+    ptr = ptr
+    unless ret.zero? && !ptr.null?
+      # XXX Fix this to raise an Errno exception.
+      raise "Lookup failed with error code #{ret}"
+    end
     ptr
+  end
+  # Convert a raw pointer to an object of this type.
+  def self.to_value(nvp_type, obj)
+    get_class(nvp_type).to_value(obj)
   end
 
   class Base
-    def initialize(nvp=nil, value=nil)
-      @nvp = nvp
-      puts "#{self.class.name}.initialize(#{nvp.inspect}, #{value.inspect})"
+    def initialize(value=nil)
+      # Invoke the validation mechanism on initialization, too.
       self.value = value
       self
     end
