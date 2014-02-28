@@ -1,4 +1,13 @@
 require 'ffi'
+require 'dl'
+require 'dl/import'
+
+# Import libavl.so to workaround broken libzfs.so builds that depend on
+# libavl but don't tell the linker.
+module LibAVL_DL
+  extend DL::Importer
+  dlload "libavl.so"
+end
 
 # Generate and manage a singleton object which contains the libzfs handle.
 module LibZFS
