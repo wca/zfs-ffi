@@ -1,3 +1,4 @@
+require 'zfs/nvvalue/array'
 require 'zfs/nvvalue'
 require 'zfs/nvlist'
 

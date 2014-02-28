@@ -28,7 +28,7 @@ module NVValue
     end
     def validate_change(input)
       unless VALID_RANGES[self.class.c_type].include?(input)
-        raise "Value #{input.inspect} invalid for #{self.class}"
+        raise ArgumentError, "Value #{input.inspect} invalid for #{self.class}"
       end
     end
   end

@@ -1,9 +1,7 @@
 require 'rubygems/package_task'
 require 'rake/testtask'
-require 'rspec/core/rake_task'
 
-RSpec::Core::RakeTask.new
-task :default => :spec
+task :default => :test
 
 task :clean do
   FileUtils.rm_rf 'pkg'
@@ -34,10 +32,15 @@ Rake::TestTask.new do |t|
   t.libs << "test"
   t.test_files = FileList['test/functional/**/*_test.rb']
 end
+Rake::TestTask.new do |t|
+  t.name = "test:unit"
+  t.libs << "test"
+  t.test_files = FileList['test/unit/**/*_test.rb']
+end
+task :test => ['test:unit', 'test:functional']
 
 # Don't ship any gems without performing some sanity tests.
-task :gem => :test
-task :gem => :spec
+task :gem => 'test:unit'
 
 Gem::PackageTask.new(gem_spec) do |pkg|
   pkg.need_tar = false

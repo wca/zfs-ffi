@@ -1,3 +1,4 @@
+require 'zfs/nvvalue/integer'
 require 'zfs/nvvalue'
 
 module NVValue
