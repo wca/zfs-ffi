@@ -9,6 +9,12 @@ module LibAVL_DL
   dlload "libavl.so"
 end
 
+# Import libuutil.so too.  See above.
+module LibUUtil_DL
+  extend DL::Importer
+  dlload "libuutil.so"
+end
+
 # Generate and manage a singleton object which contains the libzfs handle.
 module LibZFS
   extend FFI::Library
