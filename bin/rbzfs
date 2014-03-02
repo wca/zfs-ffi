@@ -2,11 +2,30 @@
 $LOAD_PATH.unshift(File.expand_path("../../lib", __FILE__))
 
 require "pp"
+require "optparse"
 require "zfs/fs"
 
 def rbzfs_cmd_proc(args)
   puts "Listing filesystems: args=#{args.inspect}"
-  args.each {|name| pp Hash[name, ZFS::FS.new(name)]}
+
+  attrs = []
+  opts = OptionParser.new do |o|
+    o.on("-a ATTR") {|x| attrs << x}
+  end
+  opts.parse!(args)
+
+  args.each do |name|
+    fs = ZFS::FS.new(name)
+    if attrs.empty?
+      pp Hash[name, fs]
+      next
+    end
+    hsh = attrs.inject({}) do |hsh, attr|
+      hsh[attr] = fs.send(attr)
+      hsh
+    end
+    pp Hash[name, hsh]
+  end
   0
 end
 

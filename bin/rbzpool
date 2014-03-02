@@ -2,10 +2,24 @@
 $LOAD_PATH.unshift(File.expand_path("../../lib", __FILE__))
 
 require "pp"
+require "optparse"
 require "zfs/pool"
 
 def rbzpool_cmd_proc(args)
-  ZFS::Pool.each {|pool| pp pool}
+  attrs = []
+
+  opts = OptionParser.new do |o|
+    o.on("-a ATTR") {|x| attrs << x}
+  end
+  opts.parse!(args)
+
+  ZFS::Pool.each do |pool|
+    if attrs.empty?
+      pp pool
+    else
+      attrs.each {|attr| pp pool.send(attr)}
+    end
+  end
   0
 end
 
