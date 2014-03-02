@@ -33,6 +33,10 @@ class NVList
     @nvpairs.keys
   end
 
+  def has_key?(key)
+    keys.include?(key)
+  end
+
   def values
     @nvpairs.values
   end
