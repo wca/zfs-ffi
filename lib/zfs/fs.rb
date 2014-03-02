@@ -14,6 +14,7 @@ module ZFS
       "#<#{self.class} name=#{@name} properties=#{@properties.inspect} " +
         "children=#{@children.inspect} snapshots=#{@snapshots.inspect}>"
     end
+
     def pretty_print_group(pp)
       super
       pp.text ","; pp.breakable

@@ -73,21 +73,26 @@ module ZFS
       @handle = handle
       refresh
     end
+
     def refresh
       enumerate_properties
       enumerate_children
       self
     end
+
     def method_missing(m, *args, &block)
       @properties.has_key?(m) ? @properties[m] : super
     end
+
     def inspect
       "#<#{self.class} name=#{@name} properties=#{@properties.inspect}"
     end
+
     def pretty_print_group(pp)
       pp.breakable
       pp.text "@properties="; pp.pp @properties
     end
+
     def pretty_print(pp)
       header = sprintf('0x%x', object_id) + ":" + @name.inspect
       pp.group(1, "#<#{self.class}:#{header} ", ">") do
@@ -111,7 +116,10 @@ module ZFS
         @properties[nvp.name] = obj.value.value
       end
     end
-    def enumerate_children; end
+
+    def enumerate_children
+    end
+
     def get_property(prop_id)
       name = self.class.base_properties[prop_id]
       raise NameError, "Property #{prop_id} unknown" unless name
@@ -124,12 +132,14 @@ module ZFS
       src = LibZFS::ZpropSource[src.read_uint]
       Property.new(name, value, src)
     end
+
     ZfsIterFsCallback = Proc.new do |handle, cb_data_id|
       list = ZFS::Dataset.get_callback_data(cb_data_id)
       raise "Callback data not available!" if list.nil?
       list << factory(handle)
       0
     end
+
     def enumerate(enum_kind)
       ZFS::Dataset.with_callback_data([]) do |objid|
         args = case enum_kind

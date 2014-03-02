@@ -23,25 +23,39 @@ class NVList
     end
     obj
   end
+
   def initialize
     @nvpairs = {}
     self
   end
-  def keys; @nvpairs.keys; end
-  def values; @nvpairs.values; end
-  def each(&block); @nvpairs.values.each(&block); end
+
+  def keys
+    @nvpairs.keys
+  end
+
+  def values
+    @nvpairs.values
+  end
+
+  def each(&block)
+    @nvpairs.values.each(&block)
+  end
+
   def inspect
     "#<#{self.class.name} pairs=#{@nvpairs.values.inspect}>"
   end
+
   def pretty_print(pp)
     pp.group(1, "#<#{self.class}:#{sprintf('0x%x', object_id)} ", ">") do
       pp.breakable
       pp.text "@nvpairs="; pp.pp @nvpairs.values
     end
   end
+
   def [](name)
     @nvpairs[name]
   end
+
   def []=(name, value)
     @nvpairs[name] = value
   end

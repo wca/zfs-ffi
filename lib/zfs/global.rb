@@ -5,6 +5,7 @@ module ZFS
     def self.open
       @@handle ||= LibZFS.libzfs_init
     end
+
     def self.close
       LibZFS.libzfs_fini(@@handle)
       @@handle = nil
@@ -12,8 +13,13 @@ module ZFS
   end
 
   # Global ZFS methods.
-  def self.handle; Handle.open; end
-  def self.last_error; LibZFS.libzfs_error_description(handle); end
+  def self.handle
+    Handle.open
+  end
+
+  def self.last_error
+    LibZFS.libzfs_error_description(handle)
+  end
 
   # NB: Opening a ZFS will validate its name too.
   def self.validate_name(name, types=LibZFS::ZfsType[:dataset])

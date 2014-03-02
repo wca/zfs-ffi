@@ -1,6 +1,7 @@
 require "zfs/libnvpair"
 
 module NVValue
+
   # Global list of value classes.
   @@nvvalues = {}
   def self.add_class(nvp_type, klass, opts={})
@@ -12,19 +13,25 @@ module NVValue
     end
     @@nvvalues[nvp_type] = klass
   end
-  def self.get_class(nvp_type); @@nvvalues[nvp_type]; end
+
+  def self.get_class(nvp_type)
+    @@nvvalues[nvp_type]
+  end
 
   # Global factory.
   def self.get_klass(nvp_type)
     @@nvvalues[nvp_type] or
       raise ArgumentError, "nvp_type #{nvp_type} not supported"
   end
+
   def self.factory(nvp_type, value, nvp=nil)
     get_klass(nvp_type).new(value)
   end
+
   def self.from_native(nvp, nvp_type)
     get_klass(nvp_type).from_native(nvp)
   end
+
   def self.lookup(fcn, nvp)
     ptr = FFI::MemoryPointer.new(:pointer).write_pointer(nil)
     ret = LibNVPair.send(fcn, nvp, ptr)
@@ -35,6 +42,7 @@ module NVValue
     end
     ptr
   end
+
   # Convert a raw pointer to an object of this type.
   def self.to_value(nvp_type, obj)
     get_class(nvp_type).to_value(obj)
@@ -46,18 +54,26 @@ module NVValue
       self.value = value
       self
     end
-    def value; @value; end
+
+    def value
+      @value
+    end
+
     def value=(new_value)
       validate_change(new_value)
       @value = new_value
     end
-    def validate_change(input); end
+
+    def validate_change(input)
+    end
+
     def pretty_print(pp)
       pp.group(1, "#<#{self.class}:#{sprintf('0x%x', object_id)} ", ">") do
         pp.breakable
         pp.text "@value="; pp.pp @value
       end
     end
+
   end
 end
 

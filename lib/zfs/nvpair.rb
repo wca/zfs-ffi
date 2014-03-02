@@ -21,6 +21,7 @@ class NVPair
     @name, @value, @nvp_type = name, value, nvp_type
     self
   end
+
   def value=(new_value)
     @value.value = new_value
   end
@@ -28,6 +29,7 @@ class NVPair
   def inspect
     "#<#{self.class.name} name=#{@name.inspect} value=#{@value.inspect}>"
   end
+
   def pretty_print(pp)
     header = sprintf('0x%x', object_id) + ":" + @name
     pp.group(1, "#<#{self.class}:#{header} ", ">") do

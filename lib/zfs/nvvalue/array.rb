@@ -9,6 +9,7 @@ module NVValue
     def each(&block)
       @value.each(&block)
     end
+
     def self.from_native(nvp)
       # The nvpair type is known by the caller, but this is the only NVValue
       # that doesn't already know what it is.  Just bite the bullet and call

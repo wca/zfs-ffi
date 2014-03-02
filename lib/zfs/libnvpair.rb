@@ -29,6 +29,7 @@ module LibNVPair
 
   # char *nvpair_name(nvpair_t *nvp)
   attach_function :nvpair_name, [:pointer], :string
+
   # data_type_t nvpair_type(nvpair_t *nvp)
   attach_function :nvpair_type, [:pointer], NVPairType
 

@@ -11,7 +11,11 @@ module ZFS
       @value = is_int ? value.to_i : value
       self
     end
-    def to_s; @value.inspect; end
+
+    def to_s
+      @value.inspect
+    end
+
     #def pretty_print(pp)
     #end
   end

@@ -25,6 +25,7 @@ module ZFS
       block.call(Pool.new(name, handle))
       0
     end
+
     ZpoolPropBaseCallback = Proc.new do |prop_id, cb_data|
       @@base_properties[prop_id] = LibZFS.zpool_prop_to_name(prop_id)
       LibZFS::ZPROP_CONT # Continue iterating on zpool properties
@@ -55,6 +56,7 @@ module ZFS
       refresh
       self
     end
+
     def get_property(prop_id)
       src = FFI::MemoryPointer.new(:uint)
       buf = FFI::MemoryPointer.new(:char, LibZFS::ZFS_MAXPROPLEN)
@@ -66,18 +68,21 @@ module ZFS
       src = LibZFS::ZpropSource[src.read_uint]
       Property.new(name, value, src)
     end
+
     def refresh_config
       @config_nvl = NVList.from_native(LibZFS.zpool_get_config(@handle, nil))
       #@vdev_tree = @config_nvl["vdev_tree"]
       #@vdev_stats = @vdev_tree["vdev_stats"]
       #@health = zpool_state_to_name(vs->vs_state, vs->vs_aux);
     end
+
     def refresh_status
       ptr = FFI::MemoryPointer.new(:pointer, 1).write_pointer(nil)
       @status = LibZFS.zpool_get_status(@handle, ptr)
       strptr = ptr.read_pointer unless ptr.null?
       @status_reason = strptr.read_string unless strptr.null?
     end
+
     # Refresh the pool properties and child lists.
     def refresh
       self.class.base_properties.each_with_index do |prop, prop_id|
@@ -87,6 +92,7 @@ module ZFS
       refresh_config
       self
     end
+
     def self.cmd_proc(args)
       require 'pp'
       each {|pool| pp pool}
