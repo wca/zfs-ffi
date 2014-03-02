@@ -11,7 +11,7 @@ module NVValue
     end
 
     def self.from_native(nvp)
-      to_value(NVValue.lookup(:nvpair_value_string, nvp))
+      to_value(NVValue.lookup(:nvpair_value_string, nvp).read_pointer)
     end
 
     def to_native
