@@ -13,7 +13,7 @@ gem_spec = Gem::Specification.new do |spec|
   spec.summary = 'ZFS'
   spec.author = 'Will Andrews <will@firepipe.net>'
   spec.has_rdoc = true
-  candidates = Dir.glob("{lib}/**/*")
+  candidates = Dir.glob("{bin,lib}/**/*")
   spec.files = candidates.delete_if {|c| c.match(/\.swp|\.svn|html|pkg/)}
 end
 

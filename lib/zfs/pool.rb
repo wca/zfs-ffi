@@ -1,5 +1,3 @@
-#!/usr/bin/env ruby
-$LOAD_PATH << File.dirname(File.dirname(__FILE__))
 require "zfs/fs"
 
 module ZFS
@@ -100,5 +98,3 @@ module ZFS
     end
   end
 end
-
-exit(ZFS::Pool.cmd_proc(ARGV)) if $0 == __FILE__

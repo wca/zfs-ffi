@@ -1,0 +1,13 @@
+#!/usr/bin/env ruby
+$LOAD_PATH.unshift(File.expand_path("../../lib", __FILE__))
+
+require "pp"
+require "zfs/fs"
+
+def rbzfs_cmd_proc(args)
+  puts "Listing filesystems: args=#{args.inspect}"
+  args.each {|name| pp Hash[name, ZFS::FS.new(name)]}
+  0
+end
+
+exit(rbzfs_cmd_proc(ARGV)) if $0 == __FILE__

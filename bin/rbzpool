@@ -1,0 +1,12 @@
+#!/usr/bin/env ruby
+$LOAD_PATH.unshift(File.expand_path("../../lib", __FILE__))
+
+require "pp"
+require "zfs/pool"
+
+def rbzpool_cmd_proc(args)
+  ZFS::Pool.each {|pool| pp pool}
+  0
+end
+
+exit(rbzpool_cmd_proc(ARGV)) if $0 == __FILE__

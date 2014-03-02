@@ -1,5 +1,3 @@
-#!/usr/bin/env ruby
-$LOAD_PATH << File.dirname(File.dirname(__FILE__))
 require "zfs/global"
 require "zfs/libzfs"
 require "zfs/property"
@@ -28,14 +26,5 @@ module ZFS
       @children = enumerate(:filesystem)
       @snapshots = enumerate(:snapshot)
     end
-
-    def self.cmd_proc(args)
-      puts "Listing filesystems: args=#{args.inspect}"
-      require 'pp'
-      args.each {|name| pp Hash[name, ZFS::FS.new(name)]}
-      0
-    end
   end
 end
-
-exit(ZFS::FS.cmd_proc(ARGV)) if $0 == __FILE__
