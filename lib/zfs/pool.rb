@@ -1,8 +1,9 @@
 require "zfs/fs"
+require "zfs/device"
 
 module ZFS
   class Pool
-    include Enumerable
+    extend Enumerable
     @@blocks = {}
 
     attr_reader :name
@@ -44,6 +45,10 @@ module ZFS
       []
     end
 
+    def self.find_by_name(name)
+      find {|p| p.name == name}
+    end
+
     def initialize(name, handle)
       @name = name
       @handle = handle
@@ -69,7 +74,7 @@ module ZFS
 
     def refresh_config
       @config_nvl = NVList.from_native(LibZFS.zpool_get_config(@handle, nil))
-      #@vdev_tree = @config_nvl["vdev_tree"]
+      @root_vdev = ZFS::Device.new(self, @config_nvl["vdev_tree"].value)
       #@vdev_stats = @vdev_tree["vdev_stats"]
       #@health = zpool_state_to_name(vs->vs_state, vs->vs_aux);
     end
