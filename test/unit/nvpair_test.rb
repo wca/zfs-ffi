@@ -22,9 +22,9 @@ class TestNVPair < Test::Unit::TestCase
 
   def should_understand(nvp_type, value)
     nvp = common(nvp_type, value)
-    assert_equal(nvp.nvp_type, nvp_type,
+    assert_equal(nvp_type, nvp.nvp_type,
                  "Generated nvpair object should think it is a #{nvp_type}")
-    assert_equal(nvp.value.value, value,
+    assert_equal(value, nvp.value.value,
                  "Generated nvpair object should think its value is #{value}")
   end
 
