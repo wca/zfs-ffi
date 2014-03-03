@@ -9,8 +9,7 @@ module ZFS
     self.init :filesystem
 
     def inspect
-      "#<#{self.class} name=#{@name} properties=#{@properties.inspect} " +
-        "children=#{@children.inspect} snapshots=#{@snapshots.inspect}>"
+      "#<#{self.class} name=#{@name.inspect}>"
     end
 
     def pretty_print_group(pp)

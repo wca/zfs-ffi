@@ -11,6 +11,7 @@ module ZFS
     # A thread-safe implementation-independent callback lookup mechanism.
     @@cb_data = {}
     @@cb_data_mtx = Mutex.new
+
     def self.with_callback_data(obj)
       @@cb_data_mtx.synchronize { @@cb_data[obj.object_id] = obj }
       objid = FFI::MemoryPointer.new(:uint64).write_uint64(obj.object_id)
@@ -18,6 +19,7 @@ module ZFS
       @@cb_data_mtx.synchronize { @@cb_data.delete(obj.object_id) }
       obj
     end
+
     def self.get_callback_data(cb_data_id)
       cb_data_id = cb_data_id.read_uint64
       @@cb_data_mtx.synchronize { @@cb_data[cb_data_id] }
@@ -39,6 +41,23 @@ module ZFS
         ZFS.handle # Make sure the handle is initialized.
         LibZFS.zprop_iter_common(@zfsprop_cb, nil, true, true, kind)
         @base_properties
+      end
+
+      def create(name, opts={})
+        cmd = %W(zfs create)
+        cmd << "-p" if opts[:recursive]
+        if opts[:props].is_a?(Hash)
+          cmd += opts[:props].inject([]) do |arr, elems|
+            a << "-o" << %Q(#{elems[0]}="#{elems[1]}")
+          end
+        end
+        cmd += opts[:append] if opts[:append]
+        cmd << name
+        cmd = cmd.join(" ")
+        $stderr.puts "Running: #{cmd}" if ENV["DEBUG"]
+        system(cmd)
+        raise "Failed to create dataset #{name}" unless $?.success?
+        new(name)
       end
     end
 
@@ -74,6 +93,11 @@ module ZFS
       refresh
     end
 
+    # No need to be more strict than name checks... at least usually.
+    def ==(other)
+      self.name == other.name
+    end
+
     def refresh
       enumerate_properties
       enumerate_children
@@ -81,11 +105,13 @@ module ZFS
     end
 
     def method_missing(m, *args, &block)
-      @properties.has_key?(m) ? @properties[m] : super
+      key = m.to_s
+      return super unless @properties.has_key?(key)
+      @properties[key]
     end
 
     def inspect
-      "#<#{self.class} name=#{@name} properties=#{@properties.inspect}"
+      "#<#{self.class} name=#{@name.inspect}>"
     end
 
     def pretty_print_group(pp)

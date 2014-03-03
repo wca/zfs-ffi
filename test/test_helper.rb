@@ -42,7 +42,7 @@ module ZFSTest
   def run_cmd(cmd)
     $stderr.puts "Running: #{cmd}" if ENV["DEBUG"]
     system(cmd)
-    raise "Command failed!" unless $?.success?
+    raise "Command #{cmd.inspect} failed!" unless $?.success?
   end
 
   def pool_setup
@@ -59,8 +59,10 @@ module ZFSTest
     end
 
     begin
-      @poolname = "#{self.class.name}_#{SecureRandom.urlsafe_base64(12)}"
-      run_cmd("zpool create #{@poolname} #{avail_disk}")
+      poolname = "#{self.class.name}_#{SecureRandom.urlsafe_base64(12)}"
+      run_cmd("zpool create #{poolname} #{avail_disk}")
+      @pool = ZFS::Pool.find_by_name(poolname)
+      @pool_fs = ZFS::FS.new(@pool.name)
       yield if block_given?
     rescue StandardError => e
       pool_teardown
@@ -69,7 +71,7 @@ module ZFSTest
   end
 
   def pool_teardown
-    run_cmd("zpool destroy -f #{@poolname}")
+    run_cmd("zpool destroy -f #{@pool.name}") if @pool
     run_cmd("mdconfig -d -u #{@memdisk}") if @memdisk
   end
 end
