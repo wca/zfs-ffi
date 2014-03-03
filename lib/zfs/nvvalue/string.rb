@@ -14,8 +14,13 @@ module NVValue
       to_value(NVValue.lookup(:nvpair_value_string, nvp).read_pointer)
     end
 
+    # String NVs are technically 'const char **', so to convert to the
+    # native form, we must create two pointers, one to point to the other,
+    # which itself points to the string value.
     def to_native
-      FFI::MemoryPointer.from_string(@value)
+      ptr = FFI::MemoryPointer.new(:pointer, 1)
+      ptr.write_pointer(FFI::MemoryPointer.from_string(@value))
+      ptr
     end
   end
 
