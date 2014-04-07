@@ -34,8 +34,13 @@ module ZFSTest
   end
 
   def available_disks
-    geom_disks.select do |name, h|
-      !name.match(/da\d+$/).nil? && (h[:rd] + h[:wr] + h[:ex]).zero?
+    geom_disks.inject([]) do |r, g|
+      name, h = g
+      if !name.match(/da\d+$/).nil? && (h[:rd] + h[:wr] + h[:ex]).zero?
+        r << name
+      else
+        r
+      end
     end
   end
 
