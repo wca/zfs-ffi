@@ -68,6 +68,7 @@ module ZFSTest
     begin
       @poolname = "#{self.class.name}_#{SecureRandom.urlsafe_base64(12)}"
       run_cmd("zpool create #{@poolname} #{avail_disk}")
+      ZFS.reopen
       @pool = ZFS::Pool.find_by_name(@poolname)
       @pool_fs = ZFS::FS.new(@pool.name)
       yield if block_given?
