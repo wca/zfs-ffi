@@ -12,9 +12,6 @@ module NVValue
 
     def self.from_native(nvp)
       ptr = NVValue.lookup(:nvpair_value_string, nvp).read_pointer
-      if ptr.address == 0
-        raise "Null pointer returned by NVValue.lookup(...).read_pointer"
-      end
       to_value(ptr)
     end
 
