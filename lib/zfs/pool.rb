@@ -83,6 +83,30 @@ module ZFS
       #@health = zpool_state_to_name(vs->vs_state, vs->vs_aux);
     end
 
+    def refresh_features
+      features = NVList.from_native(LibZFS.zpool_get_features(@handle))
+      features.each do |feat|
+        propbuf = FFI::MemoryPointer.new(:char, LibZFS::ZFS_MAXPROPLEN)
+        # XXX asomers zpool_get_features returns features with names like
+        # "org.illumos:lz4_compress", but zpool_prop_get_feature expects a
+        # name like "feature@lz4_compress".  When invoked from zpool(8),
+        # zpool_expand_proplist will fixup their names to the latter format.
+        # But this gem doesn't invoke zpool_expand_proplist, so we have to
+        # fixup the names ourselves.  The correct way is to iterate through
+        # the spa_feature_table, but that's slow and awkward.  So we'll just
+        # follow the convention.  This all goes to show that libzfs wasn't
+        # designed as a public library.
+        featname = "feature@" + feat.name.gsub(/.*:/, "")
+        # XXX asomers I have no idea where the source for a feature property
+        # comes form, but AFAICT it's always "local"
+        source = "local"
+        LibZFS.zpool_prop_get_feature(@handle, featname, propbuf,
+                                      LibZFS::ZFS_MAXPROPLEN) 
+        value = propbuf.read_string.force_encoding("UTF-8")
+        @properties[featname] = Property.new(featname, value, source)
+      end
+    end
+
     def refresh_status
       ptr = FFI::MemoryPointer.new(:pointer, 1).write_pointer(nil)
       @status = LibZFS.zpool_get_status(@handle, ptr)
@@ -95,6 +119,7 @@ module ZFS
       self.class.base_properties.each_with_index do |prop, prop_id|
         @properties[prop] = get_property(prop_id)
       end
+      refresh_features
       refresh_status
       refresh_config
       self

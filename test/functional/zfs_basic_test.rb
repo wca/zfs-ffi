@@ -67,6 +67,32 @@ class TestBasic < Test::Unit::TestCase
 end
 
 
+class TestPoolProperties < Test::Unit::TestCase
+  include ZFSTest
+
+  def setup
+    pool_setup
+  end
+
+  def teardown
+    pool_teardown
+  end
+
+  # Test that any feature properties have the correct format
+  def test_features
+    allprops = `zpool get all #{@poolname}`
+    allprops.each_line do |line|
+      poolname, propname, value, source = line.split
+      next unless propname =~ /^feature@/
+      assert( @pool.properties.keys.include?(propname) )
+      assert_equal(value, @pool.properties[propname].value)
+      assert_equal(source, @pool.properties[propname].source)
+    end
+  end
+
+end
+
+
 class TestPoolTopology < Test::Unit::TestCase
   include ZFSTest
 
