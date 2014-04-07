@@ -77,7 +77,11 @@ module NVValue
   end
 end
 
+# We must import array before any other files, because NVValue::Array is used
+# by NVValue.add_class
+require "zfs/nvvalue/array"
 Dir["#{File.dirname(__FILE__)}/nvvalue/*.rb"].each do |path|
   name = File.basename(path, ".rb")
+  next if name == "array"
   require "zfs/nvvalue/#{name}"
 end
