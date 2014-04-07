@@ -35,7 +35,6 @@ module NVValue
   def self.lookup(fcn, nvp)
     ptr = FFI::MemoryPointer.new(:pointer).write_pointer(nil)
     ret = LibNVPair.send(fcn, nvp, ptr)
-    ptr = ptr
     unless ret.zero? && !ptr.null?
       # XXX Fix this to raise an Errno exception.
       raise "Lookup failed with error code #{ret}"

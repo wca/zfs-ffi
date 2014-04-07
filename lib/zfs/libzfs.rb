@@ -110,6 +110,9 @@ module LibZFS
   # zpool_status_t zpool_get_status(zpool_handle_t *zhp, char **msgid)
   attach_function :zpool_get_status, [:pointer, :pointer], ZpoolStatus
 
+  # char *zpool_vdev_name(libzfs_handle_t*, zpool_handle_t *, nvlist_t*, boolean_t)
+  attach_function :zpool_vdev_name, [:pointer, :pointer, :pointer, :bool], :string
+
   # const char *zfs_prop_to_name(zfs_prop_t prop)
   attach_function :zfs_prop_to_name, [:int], :string
 

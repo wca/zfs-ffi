@@ -6,6 +6,7 @@ module ZFS
     extend Enumerable
     @@blocks = {}
 
+    attr_reader :handle
     attr_reader :name
     attr_reader :properties
     attr_reader :root_vdev
@@ -77,8 +78,7 @@ module ZFS
     end
 
     def refresh_config
-      @config_nvl = NVList.from_native(LibZFS.zpool_get_config(@handle, nil))
-      @root_vdev = ZFS::Device.new(self, @config_nvl["vdev_tree"].value)
+      @root_vdev = ZFS::Device.new(self, LibZFS.zpool_get_config(@handle, nil), true)
       #@vdev_stats = @vdev_tree["vdev_stats"]
       #@health = zpool_state_to_name(vs->vs_state, vs->vs_aux);
     end
