@@ -140,8 +140,9 @@ module ZFS
       # and one describing the source of the property.
       @user_props = NVList.from_native(LibZFS.zfs_get_user_props(@handle))
       @user_props.each do |nvp|
-        obj = nvp.value.find {|nvp| nvp.name == "value"}
-        @properties[nvp.name] = obj.value.value
+        value = nvp.value.find {|nvp| nvp.name == "value"}.value
+        source = nvp.value.find {|nvp| nvp.name == "source"}.value
+        @properties[nvp.name] = Property.new(nvp.name, value, source)
       end
     end
 
