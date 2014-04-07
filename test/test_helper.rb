@@ -52,22 +52,43 @@ module ZFSTest
     end
   end
 
-  def pool_setup
+  def pool_setup(type=:stripe, top_levels=1, leaves=1)
     skip("Must run ZFS pool tests as root!") unless Process.uid.zero?
+    @memdisks = []
+    required_disk_count = top_levels * leaves
 
-    avail_disk = available_disks.first
-    if avail_disk.nil?
-      $stderr.puts "No geom disks available, trying memory disk..."
-      avail_disk = `mdconfig -a -t malloc -s 1g 2>/dev/null`
-      if avail_disk.empty?
-        raise "Unable to autodetect a disk for the temporary pool"
+    avail_disks = available_disks
+    if avail_disks.size < required_disk_count
+      $stderr.puts "Insufficient geom disks available, trying memory disks..."
+
+      avail_disks = (1..required_disk_count).collect do |i|
+        disk = `mdconfig -a -t malloc -s 64m 2>/dev/null`.strip
+        if disk.empty?
+          raise "Unable to autocreate a disk for the temporary pool"
+        end
+        disk
       end
-      @memdisk = avail_disk
+      @memdisks = avail_disks
     end
 
     begin
       @poolname = "#{self.class.name}_#{SecureRandom.urlsafe_base64(12)}"
-      run_cmd("zpool create #{@poolname} #{avail_disk}")
+      if type == :stripe
+        stripe_disks = avail_disks[0..(leaves - 1)].join(' ')
+        # Use -f in case the disks have different sizes
+        run_cmd("zpool create -f #{@poolname} #{stripe_disks}")
+      elsif [:mirror, :raidz1, :raidz2, :raidz3].include? type
+        vdev_spec = ""
+        (0..(top_levels-1)).each do |i|
+          stripe_disks = avail_disks[(leaves * i)..(leaves * (i+1) - 1)]
+          vdev_spec <<= "#{type.to_s} #{stripe_disks.join(' ')} "
+        end
+        # Use -f in case the disks have different sizes
+        run_cmd("zpool create -f #{@poolname} #{vdev_spec}")
+      else
+        raise "Unknown vdev type #{type}"
+      end
+
       ZFS.reopen
       @pool = ZFS::Pool.find_by_name(@poolname)
       @pool_fs = ZFS::FS.new(@pool.name)
@@ -80,6 +101,8 @@ module ZFSTest
 
   def pool_teardown
     run_cmd("zpool destroy -f #{@poolname}", true) if @poolname
-    run_cmd("mdconfig -d -u #{@memdisk}") if @memdisk
+    @memdisks.each do |memdisk|
+      run_cmd("mdconfig -d -u #{memdisk}")
+    end
   end
 end
