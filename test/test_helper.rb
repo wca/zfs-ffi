@@ -52,10 +52,15 @@ module ZFSTest
     end
   end
 
-  def pool_setup(type=:stripe, top_levels=1, leaves=1)
+  # Create a pool with type stripe, mirror, or raidz[123] with a certain number
+  # of top level vdevs and leaf vdevs per top level vdev.  It may also have
+  # log, cache, and spare devices.  In general, the slogs and caches could have
+  # a configuration as complicated as the basic vdevs, but this method supports
+  # only stripes for slogs and caches.
+  def pool_setup(type=:stripe, top_levels=1, leaves=1, slogs=0, caches=0, spares=0)
     skip("Must run ZFS pool tests as root!") unless Process.uid.zero?
     @memdisks = []
-    required_disk_count = top_levels * leaves
+    required_disk_count = top_levels * leaves + slogs + caches + spares
 
     avail_disks = available_disks
     if avail_disks.size < required_disk_count
@@ -87,6 +92,24 @@ module ZFSTest
         run_cmd("zpool create -f #{@poolname} #{vdev_spec}")
       else
         raise "Unknown vdev type #{type}"
+      end
+      if slogs > 0
+        skip = leaves * top_levels
+        log_disks = avail_disks[skip..(skip + slogs - 1)]
+        vdev_spec = "log #{log_disks.join(' ')}"
+        run_cmd("zpool add #{@poolname} #{vdev_spec}")
+      end
+      if caches > 0
+        skip = leaves * top_levels + slogs
+        log_disks = avail_disks[skip..(skip + caches - 1)]
+        vdev_spec = "cache #{log_disks.join(' ')}"
+        run_cmd("zpool add #{@poolname} #{vdev_spec}")
+      end
+      if spares > 0
+        skip = leaves * top_levels + slogs + caches
+        log_disks = avail_disks[skip..(skip + spares - 1)]
+        vdev_spec = "spare #{log_disks.join(' ')}"
+        run_cmd("zpool add #{@poolname} #{vdev_spec}")
       end
 
       ZFS.reopen

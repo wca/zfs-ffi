@@ -35,6 +35,15 @@ module ZFS
       end
     end
 
+    def l2cache
+      return to_enum(:l2cache) unless block_given?
+      return if @config_nvl["l2cache"].nil?
+
+      @config_nvl["l2cache"].value.each do |nvl|
+        yield Device.new(@pool, nvl.value)
+      end
+    end
+
     def method_missing(meth, *args, &block)
       key = meth.to_s
       return @config_nvl[key].value.value if @config_nvl.has_key?(key)
@@ -44,5 +53,15 @@ module ZFS
     def name(verbose=false)
       LibZFS.zpool_vdev_name(ZFS.handle, @pool.handle, @config_nvl_native, verbose)
     end
+
+    def spares
+      return to_enum(:spares) unless block_given?
+      return if @config_nvl["spares"].nil?
+
+      @config_nvl["spares"].value.each do |nvl|
+        yield Device.new(@pool, nvl.value)
+      end
+    end
+
   end
 end

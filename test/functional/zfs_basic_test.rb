@@ -170,6 +170,45 @@ class TestPoolTopology < Test::Unit::TestCase
       end
     end
   end
+
+  def test_slogs
+    pool_setup(:stripe, 1, 1, 1, 0, 0)
+    pool = ZFS::Pool.find_by_name(@poolname)
+    assert_equal("root", pool.root_vdev.type)
+    assert_equal(2, pool.root_vdev.children.count)
+    basic_vdevs = pool.root_vdev.children.select {|c| c.is_log == 0}
+    log_vdevs = pool.root_vdev.children.select {|c| c.is_log == 1}
+    assert_equal(1, basic_vdevs.size)
+    assert_equal(1, log_vdevs.size)
+    assert_equal(0, basic_vdevs.first.children.count)
+    assert_equal("disk", basic_vdevs.first.type)
+    assert_equal(0, log_vdevs.first.children.count)
+    assert_equal("disk", log_vdevs.first.type)
+  end
+
+  def test_caches
+    pool_setup(:stripe, 1, 1, 0, 1, 0)
+    pool = ZFS::Pool.find_by_name(@poolname)
+    assert_equal("root", pool.root_vdev.type)
+    assert_equal(1, pool.root_vdev.children.count)
+    assert_equal(1, pool.root_vdev.l2cache.count)
+    assert_equal(0, pool.root_vdev.children.first.children.count)
+    assert_equal("disk", pool.root_vdev.children.first.type)
+    assert_equal(0, pool.root_vdev.l2cache.first.children.count)
+    assert_equal("disk", pool.root_vdev.l2cache.first.type)
+  end
+
+  def test_spares
+    pool_setup(:stripe, 1, 1, 0, 0, 1)
+    pool = ZFS::Pool.find_by_name(@poolname)
+    assert_equal("root", pool.root_vdev.type)
+    assert_equal(1, pool.root_vdev.children.count)
+    assert_equal(1, pool.root_vdev.spares.count)
+    assert_equal(0, pool.root_vdev.children.first.children.count)
+    assert_equal("disk", pool.root_vdev.children.first.type)
+    assert_equal(0, pool.root_vdev.spares.first.children.count)
+    assert_equal("disk", pool.root_vdev.spares.first.type)
+  end
 end
 
 
