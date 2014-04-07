@@ -1,4 +1,5 @@
 require 'test_helper'
+require 'set'
 
 class TestBasic < Test::Unit::TestCase
   include ZFSTest
@@ -11,6 +12,14 @@ class TestBasic < Test::Unit::TestCase
     pool_teardown
   end
 
+  def test_refresh_props
+    parent = ZFS::FS.create("#{@pool_fs.name}/parent")
+    child = ZFS::FS.create("#{@pool_fs.name}/parent/child")
+    parent.refresh
+    new_parent_instance = ZFS::FS.new("#{@pool_fs.name}/parent")
+    assert_equal(parent.properties, new_parent_instance.properties)
+  end
+
   def test_zfs_children_traversal
     fs = %W(root0 root0/bar root1 root0/bar/0 root0/baz).inject({}) do |fs, n| 
       fs[n] = ZFS::FS.create("#{@pool_fs.name}/#{n}")
@@ -19,11 +28,13 @@ class TestBasic < Test::Unit::TestCase
     # Refresh the status of every object.
     fs.each_value {|v| v.refresh}
 
-    assert_equal([fs["root0/bar"], fs["root0/baz"]],
-      fs["root0"].children.sort_by {|child| child.name},
+    expected = Set.new(["#{@pool_fs.name}/root0/bar", "#{@pool_fs.name}/root0/baz"])
+    actual = Set.new(fs["root0"].children.collect {|c| c.name})
+    assert_equal(expected, actual,
       "root0 should have only children root0/bar and root0/baz")
-    assert_equal([fs["root0/bar/0"]], fs["root0/bar"].children,
-      "root0/bar should have only children root0/bar/0")
+    expected = ["#{@pool_fs.name}/root0/bar/0"]
+    actual = fs["root0/bar"].children.collect {|c| c.name}
+    assert_equal(expected, actual, "root0/bar should have only children root0/bar/0")
     assert_equal([], fs["root1"].children, "root1 should have no children")
   end
 
