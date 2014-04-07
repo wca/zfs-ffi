@@ -16,6 +16,10 @@ module ZFS
       @value.inspect
     end
 
+    def ==(other)
+      @value == other.value
+    end
+
     #def pretty_print(pp)
     #end
   end

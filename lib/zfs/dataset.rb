@@ -81,15 +81,6 @@ module ZFS
       @properties = {}
       @children, @snapshots = [], []
 
-      handle ||= LibZFS.zfs_open(ZFS.handle, @name,
-                                 LibZFS::ZfsType[self.class.ds_kind])
-      # NB: There will be another interface for creating a filesystem, so
-      #     calling .new for an filesystem that doesn't exist is not supported.
-      if handle.null?
-        kind_str = self.class.to_s.upcase
-        raise NameError, "#{kind_str} '#{name}' not found"
-      end
-      @handle = handle
       refresh
     end
 
@@ -98,7 +89,18 @@ module ZFS
       self.name == other.name
     end
 
-    def refresh
+    def refresh(handle=nil)
+      unless handle
+        handle = LibZFS.zfs_open(ZFS.handle, @name,
+                                   LibZFS::ZfsType[self.class.ds_kind])
+        # NB: There will be another interface for creating a filesystem, so
+        #     calling .new for an filesystem that doesn't exist is not supported.
+        if handle.null?
+          kind_str = self.class.to_s.upcase
+          raise NameError, "#{kind_str} '#{name}' not found"
+        end
+      end
+      @handle = handle
       enumerate_properties
       enumerate_children
       self
