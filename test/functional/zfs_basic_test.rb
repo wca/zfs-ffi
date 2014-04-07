@@ -67,6 +67,46 @@ class TestBasic < Test::Unit::TestCase
 end
 
 
+class TestFsProperties < Test::Unit::TestCase
+  include ZFSTest
+
+  def setup
+    pool_setup
+  end
+
+  def teardown
+    pool_teardown
+  end
+
+  # Set a user property on a filesystem and verify that ruby can read it
+  # correctly
+  def test_user_prop
+    propname="com.spectralogic:test_user_prop"
+    propval="foo"
+    run_cmd("zfs set #{propname}=#{propval} #{@pool_fs.name}")
+    @pool_fs.refresh
+    assert(@pool_fs.properties[propname].is_a? ZFS::Property)
+    assert_equal(propval, @pool_fs.properties[propname].value)
+    assert_equal("local", @pool_fs.properties[propname].source)
+  end
+
+  # Set a user property on a filesystem and verify that ruby can read it
+  # correctly from a child filesystem
+  def test_inherited_user_prop
+    propname="com.spectralogic:test_user_prop"
+    propval="foo"
+    childname="#{@pool_fs.name}/child"
+    run_cmd("zfs set #{propname}=#{propval} #{@pool_fs.name}")
+    run_cmd("zfs create #{childname}")
+    child_fs = ZFS::FS.new(childname)
+    assert(child_fs.properties[propname].is_a? ZFS::Property)
+    assert_equal(propval, child_fs.properties[propname].value)
+    assert_equal("inherited from #{@pool_fs.name}",
+                 child_fs.properties[propname].source)
+  end
+end
+
+
 class TestPoolProperties < Test::Unit::TestCase
   include ZFSTest
 
