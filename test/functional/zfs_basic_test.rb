@@ -19,7 +19,8 @@ class TestBasic < Test::Unit::TestCase
     # Refresh the status of every object.
     fs.each_value {|v| v.refresh}
 
-    assert_equal([fs["root0/bar"], fs["root0/baz"]], fs["root0"].children,
+    assert_equal([fs["root0/bar"], fs["root0/baz"]],
+      fs["root0"].children.sort_by {|child| child.name},
       "root0 should have only children root0/bar and root0/baz")
     assert_equal([fs["root0/bar/0"]], fs["root0/bar"].children,
       "root0/bar should have only children root0/bar/0")
