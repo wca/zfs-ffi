@@ -12,6 +12,16 @@ class TestBasic < Test::Unit::TestCase
     pool_teardown
   end
 
+  def test_open_pool
+    assert_raise NoMethodError do
+      h = ZFS::Handle.open
+      pool = ZFS::Pool.new(@poolname, h)
+    end
+    pool = ZFS::Pool.find_by_name(@poolname)
+    assert_not_nil(pool)
+    assert_equal(@poolname, pool.name)
+  end
+
   def test_refresh_props
     parent = ZFS::FS.create("#{@pool_fs.name}/parent")
     child = ZFS::FS.create("#{@pool_fs.name}/parent/child")

@@ -21,7 +21,7 @@ module ZFS
       block = @@blocks[objid]
       raise RuntimeError, "No object #{object_id} in @@blocks!" unless block
       name = LibZFS.zpool_get_name(handle)
-      block.call(Pool.new(name, handle))
+      block.call(new(name, handle))
       0
     end
 
@@ -49,6 +49,10 @@ module ZFS
       find {|p| p.name == name}
     end
 
+    # XXX: Do not instantiate this class by hand!  Pools may only be created by
+    # find_by_name.  We segfault otherwise due to uninitialized data within the
+    # libzfs handle. 
+    private_class_method :new
     def initialize(name, handle)
       @name = name
       @handle = handle
