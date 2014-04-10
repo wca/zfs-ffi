@@ -12,7 +12,14 @@ class TestNVPair < Test::Unit::TestCase
     LibNVPair.expects(:nvpair_type).with(nil).returns(nvp_type)
     LibNVPair.instance_eval do
       metaclass.send(:define_method, nvvalue_m) do |nvp, valp|
-        fcn = (nvp_type == :boolean_value) ? "uint" : nvp_type
+        case nvp_type
+        when :boolean_value
+          fcn = "uint"
+        when :string
+          fcn = "pointer"
+        else
+          fcn = nvp_type
+        end
         valp.send("write_#{fcn}".to_sym, ptr.send("read_#{fcn}".to_sym))
         0 # All of these functions return 0 on success, errno otherwise
       end

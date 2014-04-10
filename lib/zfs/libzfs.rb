@@ -101,14 +101,23 @@ module LibZFS
   attach_function :zprop_iter_common,
     [:zprop_iter_cb, :pointer, :bool, :bool, ZfsType], :int
 
+  # int zpool_prop_get_feature(zpool_handle_t*, const char*, char*, size_t len)
+  attach_function :zpool_prop_get_feature, [:pointer, :string, :pointer, :uint], :int
+
   # const char *zpool_prop_to_name(zpool_prop_t prop)
   attach_function :zpool_prop_to_name, [:int], :string
 
   # nvlist_t zpool_get_config(zpool_handle_t *zhp, nvlist_t **oldconfig)
   attach_function :zpool_get_config, [:pointer, :pointer], :pointer
 
+  # nvlist_t* zpool_get_features(zpool_handle_t *zhp)
+  attach_function :zpool_get_features, [:pointer], :pointer
+
   # zpool_status_t zpool_get_status(zpool_handle_t *zhp, char **msgid)
   attach_function :zpool_get_status, [:pointer, :pointer], ZpoolStatus
+
+  # char *zpool_vdev_name(libzfs_handle_t*, zpool_handle_t *, nvlist_t*, boolean_t)
+  attach_function :zpool_vdev_name, [:pointer, :pointer, :pointer, :bool], :string
 
   # const char *zfs_prop_to_name(zfs_prop_t prop)
   attach_function :zfs_prop_to_name, [:int], :string

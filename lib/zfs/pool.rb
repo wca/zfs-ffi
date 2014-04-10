@@ -6,6 +6,7 @@ module ZFS
     extend Enumerable
     @@blocks = {}
 
+    attr_reader :handle
     attr_reader :name
     attr_reader :properties
     attr_reader :root_vdev
@@ -21,7 +22,7 @@ module ZFS
       block = @@blocks[objid]
       raise RuntimeError, "No object #{object_id} in @@blocks!" unless block
       name = LibZFS.zpool_get_name(handle)
-      block.call(Pool.new(name, handle))
+      block.call(new(name, handle))
       0
     end
 
@@ -49,6 +50,10 @@ module ZFS
       find {|p| p.name == name}
     end
 
+    # XXX: Do not instantiate this class by hand!  Pools may only be created by
+    # find_by_name.  We segfault otherwise due to uninitialized data within the
+    # libzfs handle. 
+    private_class_method :new
     def initialize(name, handle)
       @name = name
       @handle = handle
@@ -73,10 +78,33 @@ module ZFS
     end
 
     def refresh_config
-      @config_nvl = NVList.from_native(LibZFS.zpool_get_config(@handle, nil))
-      @root_vdev = ZFS::Device.new(self, @config_nvl["vdev_tree"].value)
+      @root_vdev = ZFS::Device.new(self, LibZFS.zpool_get_config(@handle, nil), true)
       #@vdev_stats = @vdev_tree["vdev_stats"]
       #@health = zpool_state_to_name(vs->vs_state, vs->vs_aux);
+    end
+
+    def refresh_features
+      features = NVList.from_native(LibZFS.zpool_get_features(@handle))
+      features.each do |feat|
+        propbuf = FFI::MemoryPointer.new(:char, LibZFS::ZFS_MAXPROPLEN)
+        # XXX asomers zpool_get_features returns features with names like
+        # "org.illumos:lz4_compress", but zpool_prop_get_feature expects a
+        # name like "feature@lz4_compress".  When invoked from zpool(8),
+        # zpool_expand_proplist will fixup their names to the latter format.
+        # But this gem doesn't invoke zpool_expand_proplist, so we have to
+        # fixup the names ourselves.  The correct way is to iterate through
+        # the spa_feature_table, but that's slow and awkward.  So we'll just
+        # follow the convention.  This all goes to show that libzfs wasn't
+        # designed as a public library.
+        featname = "feature@" + feat.name.gsub(/.*:/, "")
+        # XXX asomers I have no idea where the source for a feature property
+        # comes form, but AFAICT it's always "local"
+        source = "local"
+        LibZFS.zpool_prop_get_feature(@handle, featname, propbuf,
+                                      LibZFS::ZFS_MAXPROPLEN) 
+        value = propbuf.read_string.force_encoding("UTF-8")
+        @properties[featname] = Property.new(featname, value, source)
+      end
     end
 
     def refresh_status
@@ -91,6 +119,7 @@ module ZFS
       self.class.base_properties.each_with_index do |prop, prop_id|
         @properties[prop] = get_property(prop_id)
       end
+      refresh_features
       refresh_status
       refresh_config
       self

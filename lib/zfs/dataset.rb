@@ -81,15 +81,6 @@ module ZFS
       @properties = {}
       @children, @snapshots = [], []
 
-      handle ||= LibZFS.zfs_open(ZFS.handle, @name,
-                                 LibZFS::ZfsType[self.class.ds_kind])
-      # NB: There will be another interface for creating a filesystem, so
-      #     calling .new for an filesystem that doesn't exist is not supported.
-      if handle.null?
-        kind_str = self.class.to_s.upcase
-        raise NameError, "#{kind_str} '#{name}' not found"
-      end
-      @handle = handle
       refresh
     end
 
@@ -98,7 +89,18 @@ module ZFS
       self.name == other.name
     end
 
-    def refresh
+    def refresh(handle=nil)
+      unless handle
+        handle = LibZFS.zfs_open(ZFS.handle, @name,
+                                   LibZFS::ZfsType[self.class.ds_kind])
+        # NB: There will be another interface for creating a filesystem, so
+        #     calling .new for an filesystem that doesn't exist is not supported.
+        if handle.null?
+          kind_str = self.class.to_s.upcase
+          raise NameError, "#{kind_str} '#{name}' not found"
+        end
+      end
+      @handle = handle
       enumerate_properties
       enumerate_children
       self
@@ -138,8 +140,14 @@ module ZFS
       # and one describing the source of the property.
       @user_props = NVList.from_native(LibZFS.zfs_get_user_props(@handle))
       @user_props.each do |nvp|
-        obj = nvp.value.find {|nvp| nvp.name == "value"}
-        @properties[nvp.name] = obj.value.value
+        value = nvp.value.find {|nvp| nvp.name == "value"}.value.value
+        source = nvp.value.find {|nvp| nvp.name == "source"}.value.value
+        if source == name
+          sourcetxt = "local"
+        else
+          sourcetxt = "inherited from #{source}"
+        end
+        @properties[nvp.name] = Property.new(nvp.name, value, sourcetxt)
       end
     end
 
