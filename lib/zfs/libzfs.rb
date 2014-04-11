@@ -107,6 +107,9 @@ module LibZFS
   # const char *zpool_prop_to_name(zpool_prop_t prop)
   attach_function :zpool_prop_to_name, [:int], :string
 
+  # int zpool_refresh_stats(zpool_handle_t*, boolean_t*)
+  attach_function :zpool_refresh_stats, [:pointer, :pointer], :int
+
   # nvlist_t zpool_get_config(zpool_handle_t *zhp, nvlist_t **oldconfig)
   attach_function :zpool_get_config, [:pointer, :pointer], :pointer
 

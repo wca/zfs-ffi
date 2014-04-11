@@ -14,6 +14,7 @@ module ZFS
     attr_reader :spares
     attr_reader :caches
     attr_reader :slogs
+    attr_reader :scan_stats
     attr_reader :status
     attr_reader :status_reason
 
@@ -61,6 +62,7 @@ module ZFS
       @properties = {}
       @root_vdev = nil
       @spares, @caches, @slogs = [], [], []
+      @scan_stats = {}
       refresh
       self
     end
@@ -78,7 +80,18 @@ module ZFS
     end
 
     def refresh_config
-      @root_vdev = ZFS::Device.new(self, LibZFS.zpool_get_config(@handle, nil), true)
+      config_nvl_native = LibZFS.zpool_get_config(@handle, nil)
+      @root_vdev = ZFS::Device.new(self, config_nvl_native, true)
+      vdev_tree = NVList.from_native(config_nvl_native)["vdev_tree"]
+      missing = FFI::MemoryPointer.new(:bool)
+      if 0 != LibZFS.zpool_refresh_stats(@handle, missing)
+        raise IOError.new("zpool_refresh_stats returned nonzero")
+      end
+      # Pools that have never been scanned will have no scan_stats in their nvlist
+      if vdev_tree.value["scan_stats"]
+        scan_stats = vdev_tree.value["scan_stats"].value
+        set_scan_stats(scan_stats)
+      end
       #@vdev_stats = @vdev_tree["vdev_stats"]
       #@health = zpool_state_to_name(vs->vs_state, vs->vs_aux);
     end
@@ -105,6 +118,45 @@ module ZFS
         value = propbuf.read_string.force_encoding("UTF-8")
         @properties[featname] = Property.new(featname, value, source)
       end
+    end
+
+    # Set the @scan_stats based on the provided NVArray
+    # In C code, this is equivalent to casting stats to a struct pool_scan_stat
+    def set_scan_stats(stats)
+      scn_func = case stats.value[0].value
+      when 0
+        :none
+      when 1
+        :scrub
+      when 2
+        :resilver
+      else
+        :unknown
+      end
+      scn_state = case stats.value[1].value
+      when 0
+        :none
+      when 1
+        :scanning
+      when 2
+        :finished
+      when 3
+        :canceled
+      else
+        :unknown
+      end
+      @scan_stats = {:func => scn_func,
+                     :state => scn_state,
+                     :start_time => stats.value[2].value,
+                     :end_time => stats.value[3].value,
+                     :to_examine => stats.value[4].value,
+                     :examined => stats.value[5].value,
+                     :to_process => stats.value[6].value,
+                     :processed => stats.value[7].value,
+                     :errors => stats.value[8].value,
+                     :pass_exam => stats.value[9].value,
+                     :pass_start => stats.value[10].value}
+      stats.value[0]
     end
 
     def refresh_status
