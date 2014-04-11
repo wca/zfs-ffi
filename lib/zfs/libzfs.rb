@@ -43,6 +43,12 @@ module LibZFS
     :received,      0x20
   )
 
+  ZpropType = enum(
+    :number,        0,
+    :string,        1,
+    :index,         2
+  )
+
   ZpoolStatus = enum(
     # Defined in fault.fs.zfs.* namespace with corresponding message IDs.
     :corrupt_cache,
@@ -103,6 +109,12 @@ module LibZFS
 
   # int zpool_prop_get_feature(zpool_handle_t*, const char*, char*, size_t len)
   attach_function :zpool_prop_get_feature, [:pointer, :string, :pointer, :uint], :int
+
+  # uint64_t zpool_get_prop_int(zpool_handle_t*, zpool_prop_t, zprop_source_t*)
+  attach_function :zpool_get_prop_int, [:pointer, :int, :pointer], :uint64_t
+
+  # zprop_type_t zpool_prop_get_type(zpool_prop_t prop)
+  attach_function :zpool_prop_get_type, [:int], :int
 
   # const char *zpool_prop_to_name(zpool_prop_t prop)
   attach_function :zpool_prop_to_name, [:int], :string

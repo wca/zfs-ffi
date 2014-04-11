@@ -70,11 +70,21 @@ module ZFS
     def get_property(prop_id)
       src = FFI::MemoryPointer.new(:uint)
       buf = FFI::MemoryPointer.new(:char, LibZFS::ZFS_MAXPROPLEN)
-      # NB: There is no way, in libzfs, to get the untranslated number
-      #     values for zpool properties, unlike zfs properties.
-      LibZFS.zpool_get_prop(@handle, prop_id, buf, LibZFS::ZFS_MAXPROPLEN, src)
+      # Numeric properties must be fetched by zpool_get_prop_int.  Others must
+      # use zpool_get_prop.  "health" is very special; it's technically
+      # numeric, but we must use zpool_get_prop nonetheless.
       name = @@base_properties[prop_id]
-      value = buf.read_string
+      proptype = LibZFS.zpool_prop_get_type(prop_id)
+      if proptype == LibZFS::ZpropType[:string] || \
+         proptype == LibZFS::ZpropType[:index] || \
+         name == "health"
+        LibZFS.zpool_get_prop(@handle, prop_id, buf, LibZFS::ZFS_MAXPROPLEN, src)
+        value = buf.read_string
+      elsif proptype == LibZFS::ZpropType[:number]
+        value = LibZFS.zpool_get_prop_int(@handle, prop_id, src)
+      else
+        raise IOError.new("Unknown property type #{proptype} for propid #{prop_id}")
+      end
       src = LibZFS::ZpropSource[src.read_uint]
       Property.new(name, value, src)
     end
