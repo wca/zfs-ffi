@@ -333,4 +333,34 @@ class TestPoolTopology < Test::Unit::TestCase
 end
 
 
+class TestScrub < Test::Unit::TestCase
+  include ZFSTest
+
+  def setup
+    pool_setup
+  end
+
+  def teardown
+    pool_teardown
+  end
+
+  def test_short_scrub
+    run_cmd("zpool scrub #{@poolname}")
+    retries = 5
+    begin
+      @pool.refresh
+      raise :failed if :finished != @pool.scan_stats[:state]
+    rescue
+      if retries > 0
+        retries -= 1
+        sleep 1
+        retry
+      else
+        assert_equal(:finished, @pool.scan_stats[:state])
+      end
+    end
+    assert_equal :scrub, @pool.scan_stats[:func]
+  end
+
+end
 

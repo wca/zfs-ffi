@@ -133,28 +133,8 @@ module ZFS
     # Set the @scan_stats based on the provided NVArray
     # In C code, this is equivalent to casting stats to a struct pool_scan_stat
     def set_scan_stats(stats)
-      scn_func = case stats.value[0].value
-      when 0
-        :none
-      when 1
-        :scrub
-      when 2
-        :resilver
-      else
-        :unknown
-      end
-      scn_state = case stats.value[1].value
-      when 0
-        :none
-      when 1
-        :scanning
-      when 2
-        :finished
-      when 3
-        :canceled
-      else
-        :unknown
-      end
+      scn_func = LibZFS::ZpoolScanFunc[stats.value[0].value]
+      scn_state = LibZFS::ZpoolScanState[stats.value[1].value]
       @scan_stats = {:func => scn_func,
                      :state => scn_state,
                      :start_time => stats.value[2].value,

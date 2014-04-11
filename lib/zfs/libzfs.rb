@@ -34,6 +34,19 @@ module LibZFS
     :pool,          0x8,
   )
 
+  ZpoolScanFunc = enum(
+    :none,          0,
+    :scrub,         1,
+    :resilver,      2
+  )
+
+  ZpoolScanState = enum(
+    :none,          0,
+    :scanning,      1,
+    :finished,      2,
+    :canceled,      3
+  )
+
   ZpropSource = enum(
     :none,          0x1,
     :default,       0x2,
