@@ -130,6 +130,61 @@ class TestPoolProperties < Test::Unit::TestCase
     end
   end
 
+  # Test that we can lookup numeric properties, and that they are sane.
+  def test_numbers
+    all_numeric_props = %w(size free freeing allocated expandsize capacity guid
+                           dedupratio version dedupditto)
+    properties = @pool.properties
+    all_numeric_props.each do |prop|
+      assert(properties[prop].value.is_a?(Integer), "prop #{prop} had the wrong type")
+    end
+    # Sanity check a few values
+    
+    # Allocated + free == size
+    assert_equal(properties['size'].value,
+                 properties['allocated'].value + properties['free'].value)
+
+    # Version should be 1-28 or 5000 (if feature flags are enabled)
+    assert(properties['version'].value <= 28 || properties['version'].value == 5000)
+
+    # The kernel rather foolishly transforms dedupratio into a percentage
+    assert(properties['dedupratio'].value >= 100)
+  end
+
+  # The health property is very very special
+  def test_health
+    assert_equal("ONLINE", @pool.properties["health"].value)
+  end
+
+  def test_hidden_props
+    all_hidden_props = %w(name)
+    assert_equal(@poolname, @pool.properties["name"].value)
+  end
+
+  def test_index_props
+    boolean_index_props = %w(delegation autoreplace listsnapshots autoexpand
+                             readonly)
+    other_index_props = %w(failmode)
+    all_index_props = boolean_index_props + other_index_props
+    all_index_props.each do |prop|
+      assert(@pool.properties[prop].value.is_a? String)
+    end
+
+    # Sanity check a few values
+    boolean_index_props.each do |prop|
+      assert(["on", "off"].include? @pool.properties[prop].value)
+    end
+
+    assert(["wait", "continue", "panic"].include? @pool.properties["failmode"].value)
+  end
+
+  def test_strings
+    all_string_props = %w(altroot bootfs cachefile comment)
+    all_string_props.each do |prop|
+      assert(@pool.properties[prop].value.is_a? String)
+    end
+  end
+
 end
 
 
@@ -278,4 +333,34 @@ class TestPoolTopology < Test::Unit::TestCase
 end
 
 
+class TestScrub < Test::Unit::TestCase
+  include ZFSTest
+
+  def setup
+    pool_setup
+  end
+
+  def teardown
+    pool_teardown
+  end
+
+  def test_short_scrub
+    run_cmd("zpool scrub #{@poolname}")
+    retries = 5
+    begin
+      @pool.refresh
+      raise :failed if :finished != @pool.scan_stats[:state]
+    rescue
+      if retries > 0
+        retries -= 1
+        sleep 1
+        retry
+      else
+        assert_equal(:finished, @pool.scan_stats[:state])
+      end
+    end
+    assert_equal :scrub, @pool.scan_stats[:func]
+  end
+
+end
 

@@ -14,6 +14,7 @@ module ZFS
     attr_reader :spares
     attr_reader :caches
     attr_reader :slogs
+    attr_reader :scan_stats
     attr_reader :status
     attr_reader :status_reason
 
@@ -61,6 +62,7 @@ module ZFS
       @properties = {}
       @root_vdev = nil
       @spares, @caches, @slogs = [], [], []
+      @scan_stats = {}
       refresh
       self
     end
@@ -68,17 +70,38 @@ module ZFS
     def get_property(prop_id)
       src = FFI::MemoryPointer.new(:uint)
       buf = FFI::MemoryPointer.new(:char, LibZFS::ZFS_MAXPROPLEN)
-      # NB: There is no way, in libzfs, to get the untranslated number
-      #     values for zpool properties, unlike zfs properties.
-      LibZFS.zpool_get_prop(@handle, prop_id, buf, LibZFS::ZFS_MAXPROPLEN, src)
+      # Numeric properties must be fetched by zpool_get_prop_int.  Others must
+      # use zpool_get_prop.  "health" is very special; it's technically
+      # numeric, but we must use zpool_get_prop nonetheless.
       name = @@base_properties[prop_id]
-      value = buf.read_string
+      proptype = LibZFS.zpool_prop_get_type(prop_id)
+      if proptype == LibZFS::ZpropType[:string] || \
+         proptype == LibZFS::ZpropType[:index] || \
+         name == "health"
+        LibZFS.zpool_get_prop(@handle, prop_id, buf, LibZFS::ZFS_MAXPROPLEN, src)
+        value = buf.read_string
+      elsif proptype == LibZFS::ZpropType[:number]
+        value = LibZFS.zpool_get_prop_int(@handle, prop_id, src)
+      else
+        raise IOError.new("Unknown property type #{proptype} for propid #{prop_id}")
+      end
       src = LibZFS::ZpropSource[src.read_uint]
       Property.new(name, value, src)
     end
 
     def refresh_config
-      @root_vdev = ZFS::Device.new(self, LibZFS.zpool_get_config(@handle, nil), true)
+      config_nvl_native = LibZFS.zpool_get_config(@handle, nil)
+      @root_vdev = ZFS::Device.new(self, config_nvl_native, true)
+      vdev_tree = NVList.from_native(config_nvl_native)["vdev_tree"]
+      missing = FFI::MemoryPointer.new(:bool)
+      if 0 != LibZFS.zpool_refresh_stats(@handle, missing)
+        raise IOError.new("zpool_refresh_stats returned nonzero")
+      end
+      # Pools that have never been scanned will have no scan_stats in their nvlist
+      if vdev_tree.value["scan_stats"]
+        scan_stats = vdev_tree.value["scan_stats"].value
+        set_scan_stats(scan_stats)
+      end
       #@vdev_stats = @vdev_tree["vdev_stats"]
       #@health = zpool_state_to_name(vs->vs_state, vs->vs_aux);
     end
@@ -105,6 +128,25 @@ module ZFS
         value = propbuf.read_string.force_encoding("UTF-8")
         @properties[featname] = Property.new(featname, value, source)
       end
+    end
+
+    # Set the @scan_stats based on the provided NVArray
+    # In C code, this is equivalent to casting stats to a struct pool_scan_stat
+    def set_scan_stats(stats)
+      scn_func = LibZFS::ZpoolScanFunc[stats.value[0].value]
+      scn_state = LibZFS::ZpoolScanState[stats.value[1].value]
+      @scan_stats = {:func => scn_func,
+                     :state => scn_state,
+                     :start_time => stats.value[2].value,
+                     :end_time => stats.value[3].value,
+                     :to_examine => stats.value[4].value,
+                     :examined => stats.value[5].value,
+                     :to_process => stats.value[6].value,
+                     :processed => stats.value[7].value,
+                     :errors => stats.value[8].value,
+                     :pass_exam => stats.value[9].value,
+                     :pass_start => stats.value[10].value}
+      stats.value[0]
     end
 
     def refresh_status

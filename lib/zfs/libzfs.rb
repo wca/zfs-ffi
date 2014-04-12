@@ -34,6 +34,19 @@ module LibZFS
     :pool,          0x8,
   )
 
+  ZpoolScanFunc = enum(
+    :none,          0,
+    :scrub,         1,
+    :resilver,      2
+  )
+
+  ZpoolScanState = enum(
+    :none,          0,
+    :scanning,      1,
+    :finished,      2,
+    :canceled,      3
+  )
+
   ZpropSource = enum(
     :none,          0x1,
     :default,       0x2,
@@ -41,6 +54,12 @@ module LibZFS
     :local,         0x8,
     :inherited,     0x10,
     :received,      0x20
+  )
+
+  ZpropType = enum(
+    :number,        0,
+    :string,        1,
+    :index,         2
   )
 
   ZpoolStatus = enum(
@@ -104,8 +123,17 @@ module LibZFS
   # int zpool_prop_get_feature(zpool_handle_t*, const char*, char*, size_t len)
   attach_function :zpool_prop_get_feature, [:pointer, :string, :pointer, :uint], :int
 
+  # uint64_t zpool_get_prop_int(zpool_handle_t*, zpool_prop_t, zprop_source_t*)
+  attach_function :zpool_get_prop_int, [:pointer, :int, :pointer], :uint64_t
+
+  # zprop_type_t zpool_prop_get_type(zpool_prop_t prop)
+  attach_function :zpool_prop_get_type, [:int], :int
+
   # const char *zpool_prop_to_name(zpool_prop_t prop)
   attach_function :zpool_prop_to_name, [:int], :string
+
+  # int zpool_refresh_stats(zpool_handle_t*, boolean_t*)
+  attach_function :zpool_refresh_stats, [:pointer, :pointer], :int
 
   # nvlist_t zpool_get_config(zpool_handle_t *zhp, nvlist_t **oldconfig)
   attach_function :zpool_get_config, [:pointer, :pointer], :pointer
