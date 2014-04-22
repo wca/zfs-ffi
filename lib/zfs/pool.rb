@@ -89,6 +89,29 @@ module ZFS
       Property.new(name, value, src)
     end
 
+    # Return the maximum number of vdevs without which the pool is still
+    # guaranteed to be available.  For simple examples:
+    # stripe: 0
+    # mirror: 1
+    # raidz1: 1
+    # raidz2: 2
+    # raidz3: 3
+    def redundancy_level
+      # Note that the slog devices show up in @root_vdev.children, but l2arc
+      # and spare devices don't.  That's exactly what we want.
+      top_level_parities = @root_vdev.children.map do |top_level_vdev|
+        case top_level_vdev.type
+        when "mirror"
+          top_level_vdev.children.count - 1
+        when "raidz"
+          top_level_vdev.nparity
+        else
+          0
+        end
+      end
+      top_level_parities.min
+    end
+
     def refresh_config
       config_nvl_native = LibZFS.zpool_get_config(@handle, nil)
       @root_vdev = ZFS::Device.new(self, config_nvl_native, true)
