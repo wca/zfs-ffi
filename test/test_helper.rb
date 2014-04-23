@@ -52,6 +52,24 @@ module ZFSTest
     end
   end
 
+  # Return an array of n disks that may be used for the test
+  def choose_disks(n)
+    avail_disks = available_disks
+    if avail_disks.size < n
+      $stderr.puts "Insufficient geom disks available, trying memory disks..."
+
+      avail_disks = (1..n).collect do |i|
+        disk = `mdconfig -a -t malloc -s 64m 2>/dev/null`.strip
+        if disk.empty?
+          raise "Unable to autocreate a disk for the temporary pool"
+        end
+        disk
+      end
+      @memdisks = avail_disks
+    end
+    avail_disks
+  end
+
   # Create a pool with type stripe, mirror, or raidz[123] with a certain number
   # of top level vdevs and leaf vdevs per top level vdev.  It may also have
   # log, cache, and spare devices.  In general, the slogs and caches could have
@@ -62,19 +80,7 @@ module ZFSTest
     @memdisks = []
     required_disk_count = top_levels * leaves + slogs + caches + spares
 
-    avail_disks = available_disks
-    if avail_disks.size < required_disk_count
-      $stderr.puts "Insufficient geom disks available, trying memory disks..."
-
-      avail_disks = (1..required_disk_count).collect do |i|
-        disk = `mdconfig -a -t malloc -s 64m 2>/dev/null`.strip
-        if disk.empty?
-          raise "Unable to autocreate a disk for the temporary pool"
-        end
-        disk
-      end
-      @memdisks = avail_disks
-    end
+    avail_disks = choose_disks(required_disk_count)
 
     begin
       @poolname = "#{self.class.name}_#{SecureRandom.urlsafe_base64(12)}"
@@ -94,9 +100,11 @@ module ZFSTest
         raise "Unknown vdev type #{type}"
       end
       if slogs > 0
+        # Slog devices are normally mirrored or raid-10
+        mode =  slogs > 1 ? "mirror" : ""
         skip = leaves * top_levels
         log_disks = avail_disks[skip..(skip + slogs - 1)]
-        vdev_spec = "log #{log_disks.join(' ')}"
+        vdev_spec = "log #{mode} #{log_disks.join(' ')}"
         run_cmd("zpool add #{@poolname} #{vdev_spec}")
       end
       if caches > 0

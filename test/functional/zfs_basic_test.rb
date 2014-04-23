@@ -188,6 +188,90 @@ class TestPoolProperties < Test::Unit::TestCase
 end
 
 
+class TestPoolRedundancy < Test::Unit::TestCase
+  include ZFSTest
+
+  def teardown
+    pool_teardown
+  end
+
+  def test_single_disk
+    pool_setup(:stripe, 1, 1)
+    pool = ZFS::Pool.find_by_name(@poolname)
+    assert_equal(0, pool.redundancy_level)
+  end
+
+  def test_2way_mirror
+    pool_setup(:mirror, 1, 2)
+    pool = ZFS::Pool.find_by_name(@poolname)
+    assert_equal(1, pool.redundancy_level)
+  end
+
+  def test_3way_mirror
+    pool_setup(:mirror, 1, 3)
+    pool = ZFS::Pool.find_by_name(@poolname)
+    assert_equal(2, pool.redundancy_level)
+  end
+
+  def test_raidz1
+    pool_setup(:raidz1, 1, 3)
+    pool = ZFS::Pool.find_by_name(@poolname)
+    assert_equal(1, pool.redundancy_level)
+  end
+
+  def test_raidz2
+    pool_setup(:raidz2, 1, 3)
+    pool = ZFS::Pool.find_by_name(@poolname)
+    assert_equal(2, pool.redundancy_level)
+  end
+
+  def test_raidz3
+    pool_setup(:raidz3, 1, 4)
+    pool = ZFS::Pool.find_by_name(@poolname)
+    assert_equal(3, pool.redundancy_level)
+  end
+
+  def test_striped_raidz1
+    pool_setup(:raidz1, 2, 3)
+    pool = ZFS::Pool.find_by_name(@poolname)
+    assert_equal(1, pool.redundancy_level)
+  end
+
+  def test_asymetric_stripes
+    # Create a striped 3-disk raidz1 and 3-disk raidz2
+    n = 6
+    skip("Must run ZFS pool tests as root!") unless Process.uid.zero?
+    @memdisks = []
+    avail = choose_disks(n)
+    begin
+      @poolname = "#{self.class.name}_#{SecureRandom.urlsafe_base64(12)}"
+      vdev_spec = "raidz2 #{avail[0]} #{avail[1]} #{avail[2]} " + \
+                  "raidz1 #{avail[3]} #{avail[4]} #{avail[5]}"
+      run_cmd("zpool create -f #{@poolname} #{vdev_spec}")
+      ZFS.reopen
+      @pool = ZFS::Pool.find_by_name(@poolname)
+    rescue StandardError => e
+      pool_teardown
+      raise
+    end
+    assert_equal(1, @pool.redundancy_level)
+  end
+
+  def test_zil
+    pool_setup(:raidz2, 1, 3, 2, 0, 0)
+    pool = ZFS::Pool.find_by_name(@poolname)
+    assert_equal(1, pool.redundancy_level)
+  end
+
+  # L2Arc devices should never count towards the limit; they're only cache
+  def test_l2arc
+    pool_setup(:raidz2, 1, 3, 0, 1, 0)
+    pool = ZFS::Pool.find_by_name(@poolname)
+    assert_equal(2, pool.redundancy_level)
+  end
+end
+
+
 class TestPoolTopology < Test::Unit::TestCase
   include ZFSTest
 
